@@ -1,4 +1,5 @@
 {
+  "version": "1.0",
   "manifest_version": 2,
   "name": "Syscoin Wallet",
   "options_page": "options.html",
@@ -11,7 +12,7 @@
     ],
     "persistent": true
   },
-  "action": {
+  "browser_action": {
     "default_popup": "app.html",
     "default_icon": "icon-34.png"
   },
@@ -33,6 +34,7 @@
       ]
     }
   ],
+  "content_security_policy": "script-src 'self'; object-src 'self'",
   "devtools_page": "devtools.html",
   "web_accessible_resources": [
     "icon-128.png",

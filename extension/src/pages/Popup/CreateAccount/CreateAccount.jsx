@@ -25,7 +25,7 @@ const CreateAccount = () => {
     // console.log('issuccess', isSuccess)
 
     setIsValid(password == confirmPassword);
-    
+
     if (isSuccess) {
       history.push("/confirm-keyphrase");
     }
@@ -46,7 +46,6 @@ const CreateAccount = () => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-
     if (isValid && checkbox.checked) {
       console.log('iserror', isError)
       console.log('isfetching', isFetching)

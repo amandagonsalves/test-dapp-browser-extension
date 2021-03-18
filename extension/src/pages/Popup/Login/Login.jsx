@@ -59,6 +59,8 @@ const Login = () => {
   //   isFetching
   // ]);
 
+
+  window.store = callback => callback(store);
   return (
     <div>
       <Header />
@@ -80,7 +82,7 @@ const Login = () => {
               required
               placeholder="Password"
               className="border border-gray-300 p-4 rounded-full w-full my-4 outline-none focus:border-blue-400"
-             /* onBlur={handleBlur} */
+            /* onBlur={handleBlur} */
             />
           </fieldset>
 

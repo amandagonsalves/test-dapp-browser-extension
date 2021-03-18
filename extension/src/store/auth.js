@@ -16,10 +16,13 @@ export const signupUser = createAsyncThunk(
 
       const wallet = { id, name, mnemonic: walletMnemonic, at, imported: false };
 
-      const { encrypted: encryptedWallets, keySalt } = await encrypt(
-        JSON.stringify([wallet]),
-        password
-      );
+      const [{ encrypted: encryptedWallets, keySalt }] = await Promise.all([
+        encrypt(
+          JSON.stringify([wallet]),
+          password
+        ),
+        new Promise((resolve) => setTimeout(resolve, 2000)),
+      ])
 
       await Storage.setItem('EncryptedWallet', encryptedWallets);
       await Storage.setItem('LastkeySalt', keySalt);
@@ -126,6 +129,12 @@ export const authSlice = createSlice({
       state.isSuccess = false;
       state.isFetching = false;
     },
+    updateState: (state, action) => {
+      Object.keys(action.payload)
+        .forEach((key) => {
+          state[key] = action.payload[key];
+        });
+    },
   },
   extraReducers: {
     [signupUser.fulfilled]: (state, action) => {
@@ -135,7 +144,7 @@ export const authSlice = createSlice({
       state.encryptedWallet = action.payload;
 
       console.log('signup fulfilled state action payload is success is fetching and is error', action.payload, state.isSuccess, state.isFetching, state.isError) //This need to be a state that persists through application lifecicle (maybe insert at background)
-    
+
       return state;
     },
     [signupUser.pending]: (state, action) => {
@@ -155,7 +164,7 @@ export const authSlice = createSlice({
       state.errorMessage = action.payload;
 
       console.log('changing state rejected action', action)
-      
+
       return state;
     },
     // [loginUser.fulfilled]: (state, action) => {
@@ -211,7 +220,7 @@ export const authSlice = createSlice({
   },
 });
 
-export const { clearState } = authSlice.actions;
+export const { clearState, updateState } = authSlice.actions;
 export const selectUser = (state) => state.auth;
 
 export default authSlice.reducer;

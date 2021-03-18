@@ -6,7 +6,7 @@ import { Provider } from "react-redux";
 import { render } from "react-dom";
 import { Store } from 'webext-redux';
 
-const store = new Store();
+const proxyStore = new Store();
 
 // const middleware = [thunkMiddleware];
 // const storeWithMiddleware = applyMiddleware(store, ...middleware);
@@ -17,9 +17,9 @@ const store = new Store();
 //   </Provider>
 // );
 
-store.ready().then(() => {
+proxyStore.ready().then(() => {
   render(
-    <Provider store={store}>
+    <Provider store={proxyStore}>
       <App />
     </Provider>
     , window.document.querySelector(".app-container"));
