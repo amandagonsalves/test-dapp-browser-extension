@@ -1,268 +1,214 @@
-var webpack = require('webpack'),
-  path = require('path'),
-  fileSystem = require('fs-extra'),
-  env = require('./utils/env'),
-  { CleanWebpackPlugin } = require('clean-webpack-plugin'),
-  CopyWebpackPlugin = require('copy-webpack-plugin'),
-  HtmlWebpackPlugin = require('html-webpack-plugin'),
-  TerserPlugin = require('terser-webpack-plugin');
+/* eslint-disable @typescript-eslint/no-empty-function */
+/* eslint-disable @typescript-eslint/no-var-requires */
+const path = require('path');
 
-const ASSET_PATH = process.env.ASSET_PATH || '/';
+const webpack = require('webpack');
+const ZipPlugin = require('zip-webpack-plugin');
+const TerserPlugin = require('terser-webpack-plugin');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
+const { CleanWebpackPlugin } = require('clean-webpack-plugin');
+const ExtensionReloader = require('webpack-extension-reloader');
+const MiniCssExtractPlugin = require('mini-css-extract-plugin');
+const WextManifestWebpackPlugin = require('wext-manifest-webpack-plugin');
+const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
+const OptimizeCSSAssetsPlugin = require('optimize-css-assets-webpack-plugin');
 
-var alias = {
-  'react-dom': '@hot-loader/react-dom'
+const viewsPath = path.join(__dirname, 'views');
+const sourcePath = path.join(__dirname, 'source');
+const destPath = path.join(__dirname, 'extension');
+const nodeEnv = process.env.NODE_ENV || 'development';
+const targetBrowser = process.env.TARGET_BROWSER;
+
+const extensionReloaderPlugin =
+  nodeEnv === 'development'
+    ? new ExtensionReloader({
+        port: 9090,
+        reloadPage: true,
+        entries: {
+          // TODO: reload manifest on update
+          contentScript: 'contentScript',
+          background: 'background',
+          extensionPage: ['popup', 'options'],
+        },
+      })
+    : () => {
+        this.apply = () => {};
+      };
+
+const getExtensionFileType = (browser) => {
+  if (browser === 'opera') {
+    return 'crx';
+  }
+
+  if (browser === 'firefox') {
+    return 'xpi';
+  }
+
+  return 'zip';
 };
 
-// load the secrets
-var secretsPath = path.join(__dirname, 'secrets.' + env.NODE_ENV + '.js');
+module.exports = {
+  devtool: false, // https://github.com/webpack/webpack/issues/1194#issuecomment-560382342
 
-var fileExtensions = [
-  'jpg',
-  'jpeg',
-  'png',
-  'gif',
-  'eot',
-  'otf',
-  'svg',
-  'ttf',
-  'woff',
-  'woff2',
-];
+  stats: {
+    all: false,
+    builtAt: true,
+    errors: true,
+    hash: true,
+  },
 
-if (fileSystem.existsSync(secretsPath)) {
-  alias['secrets'] = secretsPath;
-}
+  mode: nodeEnv,
 
-var options = {
-  mode: process.env.NODE_ENV || 'development',
   entry: {
-    options: path.join(__dirname, 'src', 'pages', 'Options', 'index.jsx'),
-    background: path.join(__dirname, 'src', 'pages', 'Background', 'index.js'),
-    contentScript: path.join(__dirname, 'src', 'pages', 'Content', 'index.js'),
-    devtools: path.join(__dirname, 'src', 'pages', 'Devtools', 'index.js'),
-    panel: path.join(__dirname, 'src', 'pages', 'Panel', 'index.jsx'),
-    app: path.join(__dirname, 'src', 'pages', 'App', 'index.jsx'),
-    welcome: path.join(__dirname, 'src', 'pages', 'Popup', 'Welcome', 'index.jsx'),
-    createAccount: path.join(__dirname, 'src', 'pages', 'Popup', 'CreateAccount', 'index.jsx'),
-    login: path.join(__dirname, 'src', 'pages', 'Popup', 'Login', 'index.jsx'),
-    dashboard: path.join(__dirname, 'src', 'pages', 'Popup', 'Dashboard', 'index.jsx'),
-    confirmKeyPhrase: path.join(__dirname, 'src', 'pages', 'Popup', 'ConfirmKeyPhrase', 'index.jsx'),
-    importFromSeedPhrase: path.join(__dirname, 'src', 'pages', 'Popup', 'ImportFromSeedPhrase', 'index.jsx'),
+    manifest: path.join(__dirname, 'manifest.json'),
+    background: path.join(sourcePath, 'scripts/Background', 'index.ts'),
+    contentScript: path.join(sourcePath, 'scripts/ContentScript', 'index.ts'),
+    app: path.join(sourcePath, 'pages/App', 'index.tsx'),
+    options: path.join(sourcePath, 'pages/Options', 'index.tsx'),
   },
-  chromeExtensionBoilerplate: {
-    notHotReload: ['contentScript', 'devtools'],
-  },
+
   output: {
-    path: path.resolve(__dirname, 'build'),
-    filename: '[name].bundle.js',
-    publicPath: ASSET_PATH,
+    path: path.join(destPath, targetBrowser),
+    filename: 'js/[name].bundle.js',
   },
+
+  resolve: {
+    extensions: ['.ts', '.tsx', '.js', '.json'],
+    alias: {
+      'webextension-polyfill-ts': path.resolve(
+        path.join(__dirname, 'node_modules', 'webextension-polyfill-ts')
+      ),
+      assets: path.resolve(__dirname, 'source/assets'),
+      components: path.resolve(__dirname, 'source/components'),
+      scripts: path.resolve(__dirname, 'source/scripts'),
+      containers: path.resolve(__dirname, 'source/containers'),
+      pages: path.resolve(__dirname, 'source/pages'),
+      routers: path.resolve(__dirname, 'source/routers'),
+      state: path.resolve(__dirname, 'source/state'),
+      constants: path.resolve(__dirname, 'source/constants'),
+      services: path.resolve(__dirname, 'source/services'),
+      hooks: path.resolve(__dirname, 'source/hooks'),
+      fs: require.resolve("fs-extra"),
+    },
+  },
+
   module: {
     rules: [
       {
-        // look for .css or .scss files
-        test: /\.(css|scss)$/,
-        // in the `src` directory
+        type: 'javascript/auto', // prevent webpack handling json with its own loaders,
+        test: /manifest\.json$/,
+        use: {
+          loader: 'wext-manifest-loader',
+          options: {
+            usePackageJSONVersion: true, // set to false to not use package.json version for manifest
+          },
+        },
+        exclude: /node_modules/,
+      },
+      {
+        test: /\.(js|ts)x?$/,
+        loader: 'babel-loader',
+        exclude: /node_modules/,
+      },
+      {
+        test: /\.(jpg|png|svg)x?$/,
+        loader: 'file-loader',
+        exclude: /node_modules/,
+      },
+      {
+        test: /\.(sa|sc|c)ss$/,
         use: [
           {
-            loader: 'style-loader',
+            loader: 'style-loader', // It creates a CSS file per JS file which contains CSS
           },
           {
-            loader: 'css-loader',
-          },
-          {
-            loader: 'postcss-loader',
-          },
-          {
-            loader: 'sass-loader',
+            loader: 'css-loader', // Takes the CSS files and returns the CSS with imports and url(...) for Webpack
             options: {
+              import: true,
               sourceMap: true,
+              modules: {
+                localIdentName: '[name]__[local]___[hash:base64:5]',
+              },
             },
           },
-        ],
-      },
-      {
-        test: new RegExp('.(' + fileExtensions.join('|') + ')$'),
-        loader: 'file-loader',
-        options: {
-          name: '[name].[ext]',
-        },
-        exclude: /node_modules/,
-      },
-      {
-        test: /\.html$/,
-        loader: 'html-loader',
-        exclude: /node_modules/,
-      },
-      { test: /\.(ts|tsx)$/, loader: 'ts-loader', exclude: /node_modules/ },
-      {
-        test: /\.(js|jsx)$/,
-        use: [
           {
-            loader: 'source-map-loader',
+            loader: 'postcss-loader', // For autoprefixer
+            options: {
+              ident: 'postcss',
+              // eslint-disable-next-line global-require, @typescript-eslint/no-var-requires
+              plugins: [require('autoprefixer')()],
+            },
           },
-          {
-            loader: 'babel-loader',
-          },
+          'resolve-url-loader', // Rewrites relative paths in url() statements
+          'sass-loader', // Takes the Sass/SCSS file and compiles to the CSS
         ],
-        exclude: /node_modules/,
       },
     ],
   },
-  resolve: {
-    alias: alias,
-    extensions: fileExtensions
-      .map((extension) => '.' + extension)
-      .concat(['.js', '.jsx', '.ts', '.tsx', '.css']),
-    fallback: {
-      "crypto": require.resolve("crypto-browserify"),
-      "stream": require.resolve("stream-browserify"),
-      "assert": require.resolve("assert/"),
-      "constants": require.resolve("constants-browserify"),
-      "path": require.resolve("path-browserify"),
-      "http": require.resolve("stream-http"),
-      "https": require.resolve("https-browserify"),
-      "os": require.resolve("os-browserify/browser"),
-      "fs": require.resolve("fs-extra")
 
-    },
-  },
   plugins: [
-    new webpack.ProvidePlugin({
-      Buffer: ['buffer', 'Buffer'],
-      process: 'process/browser'
-    }),
-    new webpack.ProgressPlugin(),
-    // clean the build folder
+    // Plugin to not generate js bundle for manifest entry
+    new WextManifestWebpackPlugin(),
+    // Generate sourcemaps
+    new webpack.SourceMapDevToolPlugin({ filename: false }),
+    new ForkTsCheckerWebpackPlugin(),
+    // environmental variables
+    new webpack.EnvironmentPlugin(['NODE_ENV', 'TARGET_BROWSER']),
+    // delete previous build files
     new CleanWebpackPlugin({
+      cleanOnceBeforeBuildPatterns: [
+        path.join(process.cwd(), `extension/${targetBrowser}`),
+        path.join(
+          process.cwd(),
+          `extension/${targetBrowser}.${getExtensionFileType(targetBrowser)}`
+        ),
+      ],
+      cleanStaleWebpackAssets: false,
       verbose: true,
-      cleanStaleWebpackAssets: true,
-    }),
-    // expose and write the allowed env vars on the compiled bundle
-    new webpack.EnvironmentPlugin(['NODE_ENV']),
-    new CopyWebpackPlugin({
-      patterns: [
-        {
-          from: 'src/manifest.json',
-          to: path.join(__dirname, 'build'),
-          force: true,
-          transform: function (content, path) {
-            // generates the manifest file using the package.json informations
-            return Buffer.from(
-              JSON.stringify({
-                description: process.env.npm_package_description,
-                version: process.env.npm_package_version,
-                ...JSON.parse(content.toString()),
-              })
-            );
-          },
-        },
-      ],
-    }),
-    new CopyWebpackPlugin({
-      patterns: [
-        {
-          from: 'src/pages/Content/content.styles.css',
-          to: path.join(__dirname, 'build'),
-          force: true,
-        },
-      ],
-    }),
-    new CopyWebpackPlugin({
-      patterns: [
-        {
-          from: 'src/assets/img/icon-128.png',
-          to: path.join(__dirname, 'build'),
-          force: true,
-        },
-      ],
-    }),
-    new CopyWebpackPlugin({
-      patterns: [
-        {
-          from: 'src/assets/img/icon-34.png',
-          to: path.join(__dirname, 'build'),
-          force: true,
-        },
-      ],
     }),
     new HtmlWebpackPlugin({
-      template: path.join(__dirname, 'src', 'pages', 'Options', 'index.html'),
-      filename: 'options.html',
-      chunks: ['options'],
-      cache: false,
-    }),
-    new HtmlWebpackPlugin({
-      template: path.join(__dirname, 'src', 'pages', 'Devtools', 'index.html'),
-      filename: 'devtools.html',
-      chunks: ['devtools'],
-      cache: false,
-    }),
-    new HtmlWebpackPlugin({
-      template: path.join(__dirname, 'src', 'pages', 'Panel', 'index.html'),
-      filename: 'panel.html',
-      chunks: ['panel'],
-      cache: false,
-    }),
-    new HtmlWebpackPlugin({
-      template: path.join(__dirname, 'src', 'pages', 'App', 'index.html'),
-      filename: 'app.html',
+      template: path.join(viewsPath, 'app.html'),
+      inject: 'body',
       chunks: ['app'],
-      cache: false,
+      filename: 'app.html',
     }),
     new HtmlWebpackPlugin({
-      template: path.join(__dirname, 'src', 'pages', 'Popup', 'Welcome', 'index.html'),
-      filename: 'welcome.html',
-      chunks: ['welcome'],
-      cache: false,
+      template: path.join(viewsPath, 'options.html'),
+      inject: 'body',
+      chunks: ['options'],
+      filename: 'options.html',
     }),
-    new HtmlWebpackPlugin({
-      template: path.join(__dirname, 'src', 'pages', 'Popup', 'CreateAccount', 'index.html'),
-      filename: 'create-account.html',
-      chunks: ['createAccount'],
-      cache: false,
-    }),
-    new HtmlWebpackPlugin({
-      template: path.join(__dirname, 'src', 'pages', 'Popup', 'Login', 'index.html'),
-      filename: 'login.html',
-      chunks: ['login'],
-      cache: false,
-    }),
-    new HtmlWebpackPlugin({
-      template: path.join(__dirname, 'src', 'pages', 'Popup', 'Dashboard', 'index.html'),
-      filename: 'dashboard.html',
-      chunks: ['dashboard'],
-      cache: false,
-    }),
-    new HtmlWebpackPlugin({
-      template: path.join(__dirname, 'src', 'pages', 'Popup', 'ConfirmKeyPhrase', 'index.html'),
-      filename: 'confirm-keyphrase.html',
-      chunks: ['confirmKeyPhrase'],
-      cache: false,
-    }),
-    new HtmlWebpackPlugin({
-      template: path.join(__dirname, 'src', 'pages', 'Popup', 'ImportFromSeedPhrase', 'index.html'),
-      filename: 'import-from-seed-phrase.html',
-      chunks: ['importFromSeedPhrase'],
-      cache: false,
-    }),
+    // write css file(s) to build folder
+    new MiniCssExtractPlugin({ filename: 'css/[name].css' }),
+    // copy static assets
+    new CopyWebpackPlugin([{ from: 'source/assets', to: 'assets' }]),
+    // plugin to enable browser reloading in development mode
+    extensionReloaderPlugin,
   ],
-  infrastructureLogging: {
-    level: 'info',
-  },
-};
 
-if (env.NODE_ENV === 'development') {
-  options.devtool = 'cheap-module-source-map';
-} else {
-  options.optimization = {
-    minimize: true,
+  optimization: {
     minimizer: [
       new TerserPlugin({
+        cache: true,
+        parallel: true,
+        terserOptions: {
+          output: {
+            comments: false,
+          },
+        },
         extractComments: false,
       }),
+      new OptimizeCSSAssetsPlugin({
+        cssProcessorPluginOptions: {
+          preset: ['default', { discardComments: { removeAll: true } }],
+        },
+      }),
+      new ZipPlugin({
+        path: destPath,
+        extension: `${getExtensionFileType(targetBrowser)}`,
+        filename: `${targetBrowser}`,
+      }),
     ],
-  };
-}
-
-module.exports = options;
+  },
+};
