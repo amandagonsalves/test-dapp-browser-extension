@@ -25,42 +25,7 @@ browser.runtime.onInstalled.addListener((): void => {
 
   window.controller.stateUpdater();
 
-  // browser.runtime.onMessage.addListener((request, sender) => {
-  //   if (typeof request == 'object' && request.type == 'OPEN_WALLET_POPUP') {
-  //     const URL = browser.runtime.getURL('app.html');
-
-  //     if (request.shouldInjectProvider) {
-  //       store.dispatch(setConnectionInfo(sender.url));
-  //       store.dispatch(setFirstConnectionStatus(!store.getState().wallet.isConnected));
-
-  //       browser.windows.create({url: URL, type: 'popup', width: 372, height: 600, left: 900, top: 90});
-
-  //       // sendResponse({
-  //       //   sender,
-  //       //   request,
-  //       //   controller: store.getState()
-  //       // });
-  //       browser.runtime.sendMessage({ 
-  //         type: 'CONNECTION_RESPONSE',
-  //         sender,
-  //         request,
-  //         controller: store.getState()
-  //       });
-  //     }
-  //   }
-
-  //   if (typeof request == 'object' && request.type == 'RESET_CONNECTION_INFO') {
-  //     store.dispatch(setConnectionInfo(''));
-  //     store.dispatch(updateConnection(false));
-  //     store.dispatch(setFirstConnectionStatus(true));
-  //   }
-
-  //   if (typeof request == 'object' && request.type == 'CONFIRM_CONNECTION') {
-  //     store.dispatch(updateConnection(true));
-  //   }
-  // })
-
-  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  browser.runtime.onMessage.addListener((request, sender) => {
     if (typeof request == 'object' && request.type == 'OPEN_WALLET_POPUP') {
       const URL = browser.runtime.getURL('app.html');
 
@@ -69,12 +34,6 @@ browser.runtime.onInstalled.addListener((): void => {
         store.dispatch(setFirstConnectionStatus(!store.getState().wallet.isConnected));
 
         browser.windows.create({url: URL, type: 'popup', width: 372, height: 600, left: 900, top: 90});
-
-        sendResponse({
-          sender,
-          request,
-          controller: store.getState()
-        });
       }
     }
 
@@ -88,13 +47,19 @@ browser.runtime.onInstalled.addListener((): void => {
 
     if (typeof request == 'object' && request.type == 'CONFIRM_CONNECTION') {
       store.dispatch(updateConnection(true));
+
+      console.log('sending response to page')
+
+      // return new Promise((resolve, reject) => {
+      //   resolve({
+      //     sender,
+      //     request,
+      //     controller: store.getState(),
+      //   }),
+      //   reject('Error: cannot return the data');
+      // });
     }
   });
 });
-
-browser.runtime.onConnect.addListener(() => {
-  console.log('connected extension')
-  console.log(window.controller.wallet.isLocked())
-})
 
 wrapStore(store, {portName: STORE_PORT});

@@ -1,4 +1,4 @@
-import {browser} from 'webextension-polyfill-ts';
+import { browser } from 'webextension-polyfill-ts';
 
 const doctypeCheck = () => {
   const {doctype} = window.document;
@@ -65,7 +65,7 @@ const urlCheck = () => {
   ];
 
   const currentUrl = window.location.href;
-  
+
   for (let i = 0; i < permitted.length; i++) {
     const url = permitted[i];
 
@@ -93,10 +93,12 @@ window.addEventListener("message", (event) => {
   }
 
   if (event.data.type == "FROM_PAGE") {
-    chrome.runtime.sendMessage({type: 'OPEN_WALLET_POPUP', shouldInjectProvider: shouldInjectProvider()}, (response: any) => {
-      // @ts-ignore 
-      event.source?.postMessage({type: 'FROM_CONTENT', response}, event.origin);
-      console.log('response from content script', response)
-    });
+    browser.runtime.sendMessage({ type: 'OPEN_WALLET_POPUP', shouldInjectProvider: shouldInjectProvider() });
+
+    // listen to confirm connection
+    // .then(response => {
+    //   // @ts-ignore 
+    //   event.source?.postMessage({ type: 'FROM_CONTENT', response }, event.origin);
+    // });
   }
 }, false);

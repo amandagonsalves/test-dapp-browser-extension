@@ -43,15 +43,9 @@ const Auth = () => {
 
     if (redirectRoute == '/send/confirm' && !controller.wallet.account.getTempTx()) {
       history.push('/home');
+
       return;
     }
-
-    // window.addEventListener('message', (event) => {
-    //   console.log('event auth', event)
-    //   if (firstConnection && isUnlocked) {
-    //     history.push('/connect-wallet');
-    //   }
-    // });
 
     if (firstConnection && isUnlocked && !isConnected) {
       history.push('/connect-wallet');
