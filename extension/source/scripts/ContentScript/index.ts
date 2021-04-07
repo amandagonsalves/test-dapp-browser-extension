@@ -1,3 +1,5 @@
+import {browser} from 'webextension-polyfill-ts';
+
 const doctypeCheck = () => {
   const {doctype} = window.document;
 
@@ -56,12 +58,32 @@ const blockedDomainCheck = () => {
   return false;
 }
 
-const shouldInjectProvider = () => {
+const urlCheck = () => {
+  const permitted = [
+    'https://localhost:3000/',
+    'http://localhost:3000/',
+  ];
+
+  const currentUrl = window.location.href;
+  
+  for (let i = 0; i < permitted.length; i++) {
+    const url = permitted[i];
+
+    if (url === currentUrl) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+export const shouldInjectProvider = () => {
   return (
     doctypeCheck() &&
     suffixCheck() &&
     documentElementCheck() &&
-    !blockedDomainCheck()
+    !blockedDomainCheck() &&
+    urlCheck()
   );
 }
 
@@ -71,10 +93,10 @@ window.addEventListener("message", (event) => {
   }
 
   if (event.data.type == "FROM_PAGE") {
-    chrome.runtime.sendMessage({ type: 'OPEN_WALLET_POPUP', shouldInjectProvider: shouldInjectProvider() }, (response) => {
-      event.source?.postMessage({ type: 'FROM_CONTENT', response }, event.origin);
+    chrome.runtime.sendMessage({type: 'OPEN_WALLET_POPUP', shouldInjectProvider: shouldInjectProvider()}, (response: any) => {
+      // @ts-ignore 
+      event.source?.postMessage({type: 'FROM_CONTENT', response}, event.origin);
+      console.log('response from content script', response)
     });
   }
 }, false);
-
-export {}
