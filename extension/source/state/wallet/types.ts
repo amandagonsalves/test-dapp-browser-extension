@@ -49,4 +49,6 @@ export default interface IWalletState {
   isConnected: boolean;
   connectedTo: string | undefined;
   firstConnection: boolean;
+  currentURL: string | undefined;
+  accountConnected: number;
 }

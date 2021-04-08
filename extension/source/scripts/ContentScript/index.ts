@@ -1,4 +1,11 @@
-import { browser } from 'webextension-polyfill-ts';
+import {browser} from 'webextension-polyfill-ts';
+import store from 'state/store';
+
+declare global {
+  interface Window { 
+    SyscoinWallet: any; 
+  }
+}
 
 const doctypeCheck = () => {
   const {doctype} = window.document;
@@ -86,6 +93,26 @@ export const shouldInjectProvider = () => {
     urlCheck()
   );
 }
+function injectScript(content: any) {
+  try {
+    const container = document.head || document.documentElement;
+    const scriptTag = document.createElement('script');
+    scriptTag.setAttribute('async', 'false');
+    scriptTag.textContent = content;
+    container.insertBefore(scriptTag, container.children[0]);
+    container.removeChild(scriptTag);
+  } catch (error) {
+    console.error('MetaMask: Provider injection failed.', error);
+  }
+}
+
+if (shouldInjectProvider()) {
+  // @ts-ignore
+  injectScript(
+    "window.SyscoinWallet = 'Syscoin Wallet is installed! :)'"
+  );
+}
+
 
 window.addEventListener("message", (event) => {
   if (event.source != window) {
@@ -93,19 +120,19 @@ window.addEventListener("message", (event) => {
   }
 
   if (event.data.type == "FROM_PAGE") {
-    browser.runtime.sendMessage({ type: 'OPEN_WALLET_POPUP', shouldInjectProvider: shouldInjectProvider() });
+    browser.runtime.sendMessage({type: 'OPEN_WALLET_POPUP'});
   }
 }, false);
 
 browser.runtime.onMessage.addListener(request => {
- if (typeof request == 'object' && request.type == 'DISCONNECT') {
+  if (typeof request == 'object' && request.type == 'DISCONNECT') {
     const id = browser.runtime.id;
-    const port = browser.runtime.connect(id, { name: 'SYSCOIN' });
+    const port = browser.runtime.connect(id, {name: 'SYSCOIN'});
 
     port.disconnect();
-
-    console.log('response from background', request.controller)
-
-    window.postMessage({ type: 'RESPONSE_FROM_EXTENSION', controller: request.controller }, '*');
   }
-})
+
+  if (typeof request == 'object' && request.type == 'SEND_DATA') {
+    window.postMessage({type: 'RESPONSE_FROM_EXTENSION', controller: request.controller, currentTabURL: request.currentTabURL}, '*');
+  }
+});

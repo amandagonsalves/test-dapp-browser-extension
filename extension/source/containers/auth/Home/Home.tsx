@@ -21,7 +21,7 @@ import {formatNumber} from '../helpers';
 const Home = () => {
   const controller = useController();
   const getFiatAmount = useFiat();
-  const { accounts, activeAccountId, isConnected, connectedTo }: IWalletState = useSelector(
+  const { accounts, activeAccountId, currentURL, connectedTo }: IWalletState = useSelector(
     (state: RootState) => state.wallet
   );
   const [isOpenPopup, setIsOpenPopup] = useState(false);
@@ -56,14 +56,14 @@ const Home = () => {
             )}
           </section>
           <section className={styles.center}>
-            {isConnected ? <small className={styles.connected} onClick={() => setIsOpenPopup(!isOpenPopup)}>Connected</small> : <small className={styles.connected} onClick={() => setIsOpenPopup(!isOpenPopup)}>Not connected</small>}
+            {(currentURL == connectedTo) ? <small className={styles.connected} onClick={() => setIsOpenPopup(!isOpenPopup)}>Connected</small> : <small className={styles.connected} onClick={() => setIsOpenPopup(!isOpenPopup)}>Not connected</small>}
 
-            {isOpenPopup && isConnected && (
-              <Popup title={connectedTo} connected />
+            {isOpenPopup && (currentURL == connectedTo) && (
+              <Popup title={currentURL} connected />
             )}
 
-            {isOpenPopup && !isConnected && (
-              <Popup title={connectedTo} message="Syscoin Wallet is not connected this site. To connect to a web3 site, find the connect button on their site." />
+            {isOpenPopup && (currentURL !== connectedTo) && (
+              <Popup title={currentURL} message="Syscoin Wallet is not connected this site. To connect to a web3 site, find the connect button on their site." />
             )}
 
             <h3>

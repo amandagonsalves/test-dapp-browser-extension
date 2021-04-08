@@ -1,46 +1,54 @@
 import { useEffect, useState } from "react";
+import logo from "./assets/images/logosys.svg";
 
 const App = () => {
   const [isInstalled, setIsInstalled] = useState(false);
   const [list, setList] = useState([]);
-  const [showButton, setShowButton] = useState(true);
+  const [canConnect, setCanConnect] = useState(true);
+  const [address, setAddress] = useState('Connect to Syscoin Wallet');
+  const [balance, setBalance] = useState(0);
+  const [isConnected, setIsConnected] = useState(false);
+  const [wallet, setWallet] = useState({});
 
+  useEffect(() => {
+    if (!window.SyscoinWallet) {
+      setIsInstalled(false);
+
+      return;
+    }
+
+    setIsInstalled(true);
+
+    window.addEventListener("message", (event) => {
+      if (event.data.type == 'RESPONSE_FROM_EXTENSION') {
+        console.log('response in webpage', event.data.controller)
+
+        setList(event.data.controller.wallet.accounts);
+        setWallet(event.data.controller.wallet);
+
+        setIsConnected(wallet.isConnected);
+
+        if (event.data.controller.wallet.firstConnection) {
+          setCanConnect(true)
+        }
+
+        setCanConnect(false)
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    list.map((account) => {
+      setBalance(account.balance);
+      setAddress(account.address.main);
+    });
+  }, [
+    list,
+  ]);
 
   const handleMessageExtension = () => {
     window.postMessage({ type: "FROM_PAGE" }, "*");
   }
-
-  useEffect(() => {
-    const detect = function (base, installed, notInstalled) {
-      const s = document.createElement('script');
-      s.onerror = notInstalled;
-      s.onload = installed;
-      document.body.appendChild(s);
-      s.src = base + '/manifest.json';
-    }
-
-    detect('chrome-extension://gkkgaphhfkeklibjfphckifmmhnfnmhf', () => {
-      setIsInstalled(true);
-
-      window.addEventListener("message", (event) => {
-        if (event.data.type == 'RESPONSE_FROM_EXTENSION') {
-          console.log('response in webpage', event.data.controller)
-          setList(event.data.controller.wallet.accounts)
-
-          // if (event.data.response.controller.wallet.firstConnection) {
-          //   setShowButton(true)
-          // }
-
-          // setShowButton(false)
-          // console.log('response in webpage from content script', event.data.response)
-        }
-      });
-    }, () => {
-      setIsInstalled(false);
-    });
-  }, [
-    list
-  ]);
 
   const RenderList = (props) => {
     return props.list.map((item, index) => {
@@ -56,10 +64,26 @@ const App = () => {
   }
 
   return (
-    <div className="App">
-      {!isInstalled && (<h1>You need to install Syscoin Wallet</h1>)}
+    <div className="app">
+      <header className="header">
+        <img src={logo} alt="logo" className="header__logo" />
+        
+        <div className="header__info">
+          <p className="header__balance">{balance}</p>
 
-      <table id="table">
+          <button
+            className="header__buttonConnect"
+            onClick={canConnect ? handleMessageExtension : undefined}
+            disabled={!isInstalled}
+          >
+            {address}
+          </button>
+        </div>
+      </header>
+
+      {!isInstalled && (<h1 className="app__title">You need to install Syscoin Wallet.</h1>)}
+
+      <table className="table">
         <thead>
           <tr>
             <td>Accounts</td>
@@ -73,14 +97,6 @@ const App = () => {
           {list.length > 0 && (<RenderList list={list} />)}
         </tbody>
       </table>
-
-      <button
-        id="buttonConnect"
-        onClick={handleMessageExtension}
-        disabled={!isInstalled}
-      >
-        Connect to Syscoin Wallet
-      </button>
     </div>
   );
 }

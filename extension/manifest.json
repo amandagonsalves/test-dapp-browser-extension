@@ -55,8 +55,10 @@
   "content_scripts": [
     {
       "matches": [
-        "http://localhost:3000/"
+        "http://*/*",
+        "https://*/*"
       ],
+      "run_at": "document_start",
       "js": [
         "js/contentScript.bundle.js"
       ]
@@ -64,13 +66,12 @@
   ],
   "externally_connectable": {
     "matches": [
-      "http://localhost:3000/"
+      "http://*/*",
+      "https://*/*"
     ]
   },
   "web_accessible_resources": [
-    "app.html",
-    "gkkgaphhfkeklibjfphckifmmhnfnmhf",
-    "manifest.json"
+    "app.html"
   ],
   "commands": {
     "_execute_browser_action": {
