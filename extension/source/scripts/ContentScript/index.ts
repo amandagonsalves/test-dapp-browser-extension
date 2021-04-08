@@ -94,11 +94,18 @@ window.addEventListener("message", (event) => {
 
   if (event.data.type == "FROM_PAGE") {
     browser.runtime.sendMessage({ type: 'OPEN_WALLET_POPUP', shouldInjectProvider: shouldInjectProvider() });
-
-    // listen to confirm connection
-    // .then(response => {
-    //   // @ts-ignore 
-    //   event.source?.postMessage({ type: 'FROM_CONTENT', response }, event.origin);
-    // });
   }
 }, false);
+
+browser.runtime.onMessage.addListener(request => {
+ if (typeof request == 'object' && request.type == 'DISCONNECT') {
+    const id = browser.runtime.id;
+    const port = browser.runtime.connect(id, { name: 'SYSCOIN' });
+
+    port.disconnect();
+
+    console.log('response from background', request.controller)
+
+    window.postMessage({ type: 'RESPONSE_FROM_EXTENSION', controller: request.controller }, '*');
+  }
+})

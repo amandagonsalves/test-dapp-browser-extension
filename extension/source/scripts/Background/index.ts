@@ -48,18 +48,38 @@ browser.runtime.onInstalled.addListener((): void => {
     if (typeof request == 'object' && request.type == 'CONFIRM_CONNECTION') {
       store.dispatch(updateConnection(true));
 
-      console.log('sending response to page')
+      browser.tabs.query({ active: true }).then(async (tabs) => {
+        // @ts-ignore
+        await browser.tabs.sendMessage(tabs[0].id, { type: 'DISCONNECT', controller: store.getState() });
+      }).then(response => {
+        console.log('browser tabs finalized', response)
+      });
 
-      // return new Promise((resolve, reject) => {
-      //   resolve({
-      //     sender,
-      //     request,
-      //     controller: store.getState(),
-      //   }),
-      //   reject('Error: cannot return the data');
+      return;
+    }
+
+    if (store.getState().wallet.isConnected) {
+      // browser.tabs.query({ active: true }).then(async (tabs) => {
+      //   // @ts-ignore
+      //   await browser.tabs.sendMessage(tabs[0].id, { type: 'DISCONNECT', controller: store.getState() });
+      // }).then(response => {
+      //   console.log('browser tabs finalized', response)
       // });
+      // return {
+      //   controller: store.getState();
+      // }
+      console.log('is connected true')
     }
   });
+
+  browser.runtime.onConnect.addListener((port) => {
+    port.onDisconnect.addListener(async () => {
+      const all = await browser.windows.getAll();
+      const windowId = all[1].id;
+      // @ts-ignore
+      await browser.windows.remove(windowId);
+    })
+  })
 });
 
 wrapStore(store, {portName: STORE_PORT});
