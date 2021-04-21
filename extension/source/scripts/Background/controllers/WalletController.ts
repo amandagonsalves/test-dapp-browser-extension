@@ -1,4 +1,5 @@
 import { generateMnemonic, validateMnemonic } from 'bip39';
+import { fromZPrv } from 'bip84';
 import store from 'state/store';
 import {
   setKeystoreInfo,
@@ -31,6 +32,7 @@ export interface IWalletController {
   switchNetwork: (networkId: string) => void;
   getNewAddress: () => Promise<boolean>;
   logOut: () => void;
+  formatAddress: (address: string) => string;
 }
 
 const WalletController = (): IWalletController => {
@@ -125,10 +127,21 @@ const WalletController = (): IWalletController => {
       if (!decriptedMnemonic) {
         throw new Error('password wrong');
       }
+      console.log("starting process:", HDsigner, sjs)
       if (HDsigner === null || sjs === null) {
         HDsigner = new sys.utils.HDSigner(decriptedMnemonic, null, true)
         sjs = new sys.SyscoinJSLib(HDsigner, backendURl)
-
+        const { activeAccountId, accounts } = store.getState().wallet;
+        if (accounts.length > 1000) {
+          return false
+        }
+        for (let i = 1; i <= accounts.length - 1; i++) {
+          console.log(i)
+          const child = sjs.HDSigner.deriveAccount(i)
+          /* eslint new-cap: ["error", { "newIsCap": false }] */
+          sjs.HDSigner.accounts.push(new fromZPrv(child, sjs.HDSigner.pubTypes, sjs.HDSigner.networks))
+          sjs.HDSigner.accountIndex = activeAccountId
+        }
         //Restore logic/ function goes here 
         console.log('HDsigner retrieved')
         console.log('XPUB retrieved', sjs.HDSigner.getAccountXpub())
@@ -136,6 +149,8 @@ const WalletController = (): IWalletController => {
 
       password = pwd;
       mnemonic = decriptedMnemonic;
+
+      console.log('password and mnemonic unlock', password, mnemonic);
 
       account.getPrimaryAccount(password, sjs);
       account.watchMemPool();
@@ -151,7 +166,8 @@ const WalletController = (): IWalletController => {
     if (checkPassword(pwd)) {
       password = '';
       mnemonic = '';
-
+      HDsigner = null;
+      sjs = null;
       store.dispatch(deleteWalletState());
       store.dispatch(updateStatus());
     }
@@ -176,6 +192,7 @@ const WalletController = (): IWalletController => {
   const logOut = () => {
     password = '';
     mnemonic = '';
+    console.log('logout', password, mnemonic)
     store.dispatch(updateStatus());
   };
 
@@ -215,6 +232,13 @@ const WalletController = (): IWalletController => {
     return account.setNewAddress(address)
   }
 
+  const formatAddress = (address: string) => {
+    const last4Characters = address.slice(-4);
+    const first4Characters = address.substring(0, 4);
+
+    return `${first4Characters}...${last4Characters}`;
+  }
+
   const account = AccountController({ checkPassword, importPrivKey });
 
   return {
@@ -232,6 +256,7 @@ const WalletController = (): IWalletController => {
     switchNetwork,
     getNewAddress,
     logOut,
+    formatAddress
   };
 };
 

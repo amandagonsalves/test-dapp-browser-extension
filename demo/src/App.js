@@ -3,100 +3,155 @@ import logo from "./assets/images/logosys.svg";
 
 const App = () => {
   const [isInstalled, setIsInstalled] = useState(false);
-  const [list, setList] = useState([]);
   const [canConnect, setCanConnect] = useState(true);
-  const [address, setAddress] = useState('Connect to Syscoin Wallet');
   const [balance, setBalance] = useState(0);
-  const [isConnected, setIsConnected] = useState(false);
-  const [wallet, setWallet] = useState({});
+  const [controller, setController] = useState();
+  const [connectedAccount, setConnectedAccount] = useState({});
+  const [connectedAccountAddress, setConnectedAccountAddress] = useState('');
+  const [amount, setAmount] = useState(0);
+  const [fee, setFee] = useState(0.0000001);
+  const [toAddress, setToAddress] = useState('');
+  let componentMounted = true;
 
   useEffect(() => {
-    if (!window.SyscoinWallet) {
-      setIsInstalled(false);
+    const callback = (event) => {
+      if (event.detail.SyscoinInstalled) {
+        setIsInstalled(true);
 
-      return;
-    }
+        if (event.detail.ConnectionsController) {
+          setController(window.ConnectionsController);
 
-    setIsInstalled(true);
-
-    window.addEventListener("message", (event) => {
-      if (event.data.type == 'RESPONSE_FROM_EXTENSION') {
-        console.log('response in webpage', event.data.controller)
-
-        setList(event.data.controller.wallet.accounts);
-        setWallet(event.data.controller.wallet);
-
-        setIsConnected(wallet.isConnected);
-
-        if (event.data.controller.wallet.firstConnection) {
-          setCanConnect(true)
+          return;
         }
 
-        setCanConnect(false)
+        return;
       }
-    });
+
+      setIsInstalled(false);
+
+      window.removeEventListener('SyscoinStatus', callback);
+    }
+
+    window.addEventListener('SyscoinStatus', callback);
   }, []);
 
   useEffect(() => {
-    list.map((account) => {
-      setBalance(account.balance);
-      setAddress(account.address.main);
-    });
+    if (controller) {
+      controller.getConnectedAccount()
+        .then((data) => {
+          if (!data) {
+            return;
+          }
+      
+          if (componentMounted && data) {
+            setConnectedAccount(data);
+            setConnectedAccountAddress(data.address.main);
+            setBalance(data.balance);
+      
+            return;
+          }
+      
+          return;
+        })
+    }
+
+    return () => {
+      componentMounted = false;
+    }
   }, [
-    list,
+    controller,
+    componentMounted
   ]);
 
   const handleMessageExtension = () => {
     window.postMessage({ type: "FROM_PAGE" }, "*");
   }
 
-  const RenderList = (props) => {
-    return props.list.map((item, index) => {
-      return (
-        <tr key={index}>
-          <td>{item.label}</td>
-          <td>{item.balance}</td>
-          <td>No transactions</td>
-          <td>{item.address.main}</td>
-        </tr>
-      )
-    });
+  const handleGetWalletState = async () => {
+    return await controller.getWalletState();
+  }
+
+  const transferSYS = (sender, receiver, amount, fee) => {
+    controller.transferSYS(sender, receiver, amount, fee).then(res => {
+      console.log('res transfer', res)
+    })
   }
 
   return (
     <div className="app">
-      <header className="header">
-        <img src={logo} alt="logo" className="header__logo" />
-        
-        <div className="header__info">
-          <p className="header__balance">{balance}</p>
+      {!controller && (<p>...</p>)}
+
+      {controller && (
+        <div>
+          <header className="header">
+            <img src={logo} alt="logo" className="header__logo" />
+
+            <div className="header__info">
+              <p className="header__balance">{balance}</p>
+
+              <button
+                className="header__buttonConnect"
+                onClick={canConnect ? handleMessageExtension : undefined}
+                disabled={!isInstalled}
+              >
+                {connectedAccountAddress === '' ? 'Connect to Syscoin Wallet' : connectedAccountAddress}
+              </button>
+            </div>
+          </header>
+
+          {!isInstalled && (<h1 className="app__title">You need to install Syscoin Wallet.</h1>)}
+
+          <table className="table">
+            <thead>
+              <tr>
+                <td>Accounts</td>
+                <td>Balance</td>
+                <td>Address</td>
+              </tr>
+            </thead>
+
+            <tbody id="tbody">
+              {connectedAccount && (
+                <tr>
+                  <td>{connectedAccount.label}</td>
+                  <td>{connectedAccount.balance}</td>
+                  <td>{connectedAccountAddress}</td>
+                </tr>                
+              )}
+            </tbody>
+          </table>
+
+          <input
+            placeholder="amount"
+            type="number"
+            onBlur={(event) => setAmount(event.target.value)}
+          />
+
+          <input
+            placeholder="fee"
+            type="number"
+            onBlur={(event) => setFee(event.target.value)}
+          />
+
+          <input
+            placeholder="to address"
+            type="text"
+            onBlur={(event) => setToAddress(event.target.value)}
+          />
 
           <button
-            className="header__buttonConnect"
-            onClick={canConnect ? handleMessageExtension : undefined}
-            disabled={!isInstalled}
+            onClick={() => transferSYS(connectedAccountAddress, toAddress, amount, fee)}
           >
-            {address}
+            send sys
+          </button>
+
+          <button
+            onClick={handleGetWalletState}
+          >
+            console wallet state
           </button>
         </div>
-      </header>
-
-      {!isInstalled && (<h1 className="app__title">You need to install Syscoin Wallet.</h1>)}
-
-      <table className="table">
-        <thead>
-          <tr>
-            <td>Accounts</td>
-            <td>Balance</td>
-            <td>Transactions</td>
-            <td>Address</td>
-          </tr>
-        </thead>
-
-        <tbody id="tbody">
-          {list.length > 0 && (<RenderList list={list} />)}
-        </tbody>
-      </table>
+      ) }
     </div>
   );
 }

@@ -144,13 +144,6 @@ const WalletSend: FC<IWalletSend> = ({ initAddress = '' }) => {
                 onChange={handleAddressChange}
                 variant={addressInputClass}
               />
-              <Button
-                type="button"
-                variant={styles.textBtn}
-                onClick={() => setModalOpen(true)}
-              >
-                Contacts
-              </Button>
             </li>
             <li>
               <label>SYS Amount</label>
@@ -211,7 +204,7 @@ const WalletSend: FC<IWalletSend> = ({ initAddress = '' }) => {
           <div className={styles.actions}>
             <Button
               type="button"
-              theme="secondary"
+              theme="btn-outline-secondary"
               variant={clsx(styles.button, styles.close)}
               linkTo="/home"
             >

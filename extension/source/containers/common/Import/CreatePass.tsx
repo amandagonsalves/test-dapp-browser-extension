@@ -1,12 +1,12 @@
-import React, {useState} from 'react';
-import {useHistory} from 'react-router-dom';
+import React, { useState } from 'react';
+import { useHistory } from 'react-router-dom';
 import Button from 'components/Button';
 import TextInput from 'components/TextInput';
 import CheckIcon from '@material-ui/icons/CheckCircle';
-import {useForm} from 'react-hook-form';
-import {useController} from 'hooks/index';
-import {useSelector} from 'react-redux';
-import {RootState} from 'state/store';
+import { useForm } from 'react-hook-form';
+import { useController } from 'hooks/index';
+import { useSelector } from 'react-redux';
+import { RootState } from 'state/store';
 import IWalletState from 'state/wallet/types';
 
 import Layout from '../../common/Layout';
@@ -26,7 +26,7 @@ const CreatePass = () => {
     ? consts.CREATE_PASS_COMMENT2
     : consts.CREATE_PASS_COMMENT1;
 
-  const {firstConnection, isConnected}: IWalletState = useSelector(
+  const { canConnect }: IWalletState = useSelector(
     (state: RootState) => state.wallet
   );
 
@@ -34,7 +34,7 @@ const CreatePass = () => {
     if (passed) {
       controller.wallet.createWallet(true);
 
-      if (firstConnection && !isConnected) {
+      if (canConnect) {
         history.push('/connect-wallet');
       } else {
         history.push('/home');
@@ -88,6 +88,7 @@ const CreatePass = () => {
         <span className={`body-comment ${styles.comment}`}>{comment}</span>
         <Button
           type={passed ? 'button' : 'submit'}
+          theme="btn-gradient-primary"
           variant={styles.next}
           onClick={nextHandler}
         >

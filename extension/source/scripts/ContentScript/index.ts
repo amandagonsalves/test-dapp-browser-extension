@@ -1,14 +1,13 @@
-import {browser} from 'webextension-polyfill-ts';
-import store from 'state/store';
+import { browser } from 'webextension-polyfill-ts';
 
 declare global {
-  interface Window { 
-    SyscoinWallet: any; 
+  interface Window {
+    SyscoinWallet: any;
   }
 }
 
 const doctypeCheck = () => {
-  const {doctype} = window.document;
+  const { doctype } = window.document;
 
   if (doctype) {
     return doctype.name === 'html';
@@ -65,54 +64,54 @@ const blockedDomainCheck = () => {
   return false;
 }
 
-const urlCheck = () => {
-  const permitted = [
-    'https://localhost:3000/',
-    'http://localhost:3000/',
-  ];
-
-  const currentUrl = window.location.href;
-
-  for (let i = 0; i < permitted.length; i++) {
-    const url = permitted[i];
-
-    if (url === currentUrl) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
 export const shouldInjectProvider = () => {
   return (
     doctypeCheck() &&
     suffixCheck() &&
     documentElementCheck() &&
-    !blockedDomainCheck() &&
-    urlCheck()
+    !blockedDomainCheck()
   );
 }
+
 function injectScript(content: any) {
   try {
     const container = document.head || document.documentElement;
     const scriptTag = document.createElement('script');
-    scriptTag.setAttribute('async', 'false');
     scriptTag.textContent = content;
+
     container.insertBefore(scriptTag, container.children[0]);
-    container.removeChild(scriptTag);
+
+    scriptTag.onload = () => {
+      scriptTag.remove();
+    }
   } catch (error) {
-    console.error('MetaMask: Provider injection failed.', error);
+    console.error('Syscoin Wallet: Provider injection failed.', error);
+  }
+}
+
+function injectScriptFile(file: string) {
+  try {
+    const container = document.head || document.documentElement;
+    const scriptTag = document.createElement('script');
+    scriptTag.src = browser.runtime.getURL(file);
+    
+    container.insertBefore(scriptTag, container.children[0]);
+
+    scriptTag.onload = () => {
+      scriptTag.remove();
+    }
+  } catch (error) {
+    console.error('Syscoin Wallet: Provider injection failed.', error);
   }
 }
 
 if (shouldInjectProvider()) {
-  // @ts-ignore
-  injectScript(
-    "window.SyscoinWallet = 'Syscoin Wallet is installed! :)'"
-  );
-}
+  injectScript("window.SyscoinWallet = 'Syscoin Wallet is installed! :)'");
 
+  window.dispatchEvent(new CustomEvent('SyscoinStatus', { detail: { SyscoinInstalled: true, ConnectionsController: false } }));
+
+  injectScriptFile('js/inpage.bundle.js');
+}
 
 window.addEventListener("message", (event) => {
   if (event.source != window) {
@@ -120,19 +119,83 @@ window.addEventListener("message", (event) => {
   }
 
   if (event.data.type == "FROM_PAGE") {
-    browser.runtime.sendMessage({type: 'OPEN_WALLET_POPUP'});
+    browser.runtime.sendMessage({
+      type: 'OPEN_WALLET_POPUP',
+      target: 'background'
+    });
+
+    return;
+  }
+
+  if (event.data.type == 'SEND_STATE_TO_PAGE' && event.data.target == 'contentScript') {
+    browser.runtime.sendMessage({
+      type: 'SEND_STATE_TO_PAGE',
+      target: 'background'
+    });
+
+    return;
+  }
+
+  if (event.data.type == 'SEND_CONNECTED_ACCOUNT' && event.data.target == 'contentScript') {
+    browser.runtime.sendMessage({
+      type: 'SEND_CONNECTED_ACCOUNT',
+      target: 'background'
+    });
+
+    return;
+  }
+
+  if (event.data.type == 'TRANSFER_SYS' && event.data.target == 'contentScript') {
+    browser.runtime.sendMessage({
+      type: 'TRANSFER_SYS',
+      target: 'background',
+      fromActiveAccountId: event.data.fromActiveAccountId,
+      toAddress: event.data.toAddress,
+      amount: event.data.amount,
+      fee: event.data.fee
+    });
+
+    return;
   }
 }, false);
 
 browser.runtime.onMessage.addListener(request => {
   if (typeof request == 'object' && request.type == 'DISCONNECT') {
     const id = browser.runtime.id;
-    const port = browser.runtime.connect(id, {name: 'SYSCOIN'});
+    const port = browser.runtime.connect(id, { name: 'SYSCOIN' });
 
     port.disconnect();
+
+    return;
   }
 
-  if (typeof request == 'object' && request.type == 'SEND_DATA') {
-    window.postMessage({type: 'RESPONSE_FROM_EXTENSION', controller: request.controller, currentTabURL: request.currentTabURL}, '*');
+  if (request.type == 'SEND_STATE_TO_PAGE' && request.target == 'contentScript') {
+    window.postMessage({
+      type: 'SEND_STATE_TO_PAGE',
+      target: 'connectionsController',
+      state: request.state
+    }, '*');
+
+    return;
+  }
+
+  if (request.type == 'SEND_CONNECTED_ACCOUNT' && request.target == 'contentScript') {
+    window.postMessage({
+      type: 'SEND_CONNECTED_ACCOUNT',
+      target: 'connectionsController',
+      connectedAccount: request.connectedAccount
+    }, '*');
+
+    return;
+  }
+
+  if (request.type == 'TRANSFER_SYS' && request.target == 'contentScript') {
+    window.postMessage({
+      type: 'TRANSFER_SYS',
+      target: 'connectionsController',
+      complete: request.complete
+    }, '*');
+
+    return;
   }
 });

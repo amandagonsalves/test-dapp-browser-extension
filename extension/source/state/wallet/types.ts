@@ -9,6 +9,7 @@ export interface IAccountState {
   id: number;
   label: string;
   xpub: string;
+  masterPrv: string;
   assets: {
     [assetId: number]: {
       name: string;
@@ -19,6 +20,7 @@ export interface IAccountState {
   // type: AccountType;
   balance: number;
   transactions: Transaction[];
+  connectedTo: any[];
 }
 
 export interface IAccountUpdateState {
@@ -46,9 +48,9 @@ export default interface IWalletState {
   seedKeystoreId: number;
   activeNetwork: string;
   encriptedMnemonic: any;
-  isConnected: boolean;
-  connectedTo: string | undefined;
-  firstConnection: boolean;
+  currentSenderURL: string | undefined;
   currentURL: string | undefined;
-  accountConnected: number;
+  canConnect: boolean;
+  connections: any[];
+  confirmingTransaction: boolean;
 }

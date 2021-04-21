@@ -23,7 +23,13 @@ const SendConfirm = () => {
   const { accounts, activeAccountId, currentSenderURL, confirmingTransaction }: IWalletState = useSelector(
     (state: RootState) => state.wallet
   );
-  const tempTx = controller.wallet.account.getTempTx();
+  // const tempTx = controller.wallet.account.getTempTx();
+  const tempTx = {
+    amount: 123,
+    toAddress: 'asdad',
+    fromAddress: accounts[activeAccountId].address.main,
+    fee: 0.12121
+  };
   const [confirmed, setConfirmed] = useState(false);
   const alert = useAlert();
 
@@ -101,11 +107,9 @@ const SendConfirm = () => {
           </span>
         </div>
 
-        {confirmingTransaction && (
-          <div className={styles.txAmount}>
+        <div className={styles.txAmount}>
             <p>Confirm transaction on {currentSenderURL}?</p>
           </div>
-        )}
 
         <div className={styles.actions}>
           <Button

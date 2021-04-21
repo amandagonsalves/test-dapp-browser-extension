@@ -13,7 +13,7 @@ interface IImportPhrase {
   onRegister: () => void;
 }
 
-const ImportPhrase: FC<IImportPhrase> = ({ onRegister }) => {
+const ImportPhrase: FC<IImportPhrase> = ({onRegister}) => {
   const controller = useController();
   const { handleSubmit, register } = useForm({
     validationSchema: yup.object().shape({
@@ -43,15 +43,21 @@ const ImportPhrase: FC<IImportPhrase> = ({ onRegister }) => {
           inputRef={register}
           variant={styles.input}
         />
+
         {!isValid && (
           <p>Seed phrase is not valid.</p>
         )}
+
         <span>
           Importing your wallet seed will automatically import a wallet
           associated with this seed phrase.
         </span>
+
         <div className={styles.actions}>
-          <Button type="submit" variant={styles.button}>
+          <Button
+            type="submit"
+            theme="btn-gradient-primary"
+            variant={styles.button}>
             Import
           </Button>
         </div>

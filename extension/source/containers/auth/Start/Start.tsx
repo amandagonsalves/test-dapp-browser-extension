@@ -22,7 +22,7 @@ const Starter = () => {
 
   return (
     <div className={styles.home}>
-      <h1 className="heading-1 full-width t-white t-quicksand tw-medium">
+      <h1 className="heading-1 full-width t-roboto tw-medium t-royalBlue">
         Welcome to
         <br />
         Syscoin Wallet
@@ -45,11 +45,14 @@ const Starter = () => {
             <span className={styles.error}>Error: Invalid password</span>
           )
         )}
-        <Button type="submit" theme="secondary" variant={styles.unlock}>
+        <Button
+          type="submit"
+          theme="btn-gradient-primary"
+          variant={styles.unlock}>
           Unlock
         </Button>
       </form>
-      <Link color="secondary" to="/import">
+      <Link color="tertiary" to="/import">
         Import using wallet seed phrase
       </Link>
     </div>
