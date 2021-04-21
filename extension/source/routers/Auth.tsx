@@ -10,7 +10,7 @@ import {
 import { useTransition, animated } from 'react-spring';
 import Start from 'containers/auth/Start';
 import Home from 'containers/auth/Home';
-import Send, { SendConfirm, SendConfirmTransactionOnSite } from 'containers/auth/Send';
+import Send, { SendConfirm } from 'containers/auth/Send';
 import Receive from 'containers/auth/Receive';
 import Import from 'containers/common/Import';
 import ConnectWallet from 'containers/auth/ConnectWallet';
@@ -48,7 +48,6 @@ const Auth = () => {
   });
 
   useEffect(() => {
-    console.log(controller.wallet.account.getTempTx())
     const redirectRoute = controller.appRoute();
 
     if (redirectRoute == '/send/confirm' && !controller.wallet.account.getTempTx()) {
@@ -136,9 +135,6 @@ const Auth = () => {
             {isUnlocked && canConnect && (connectedAccounts.length > 0) && <Route path="/connected-accounts" component={ConnectedAccounts} exact />}
             {isUnlocked && (
               <Route path="/send/confirm" component={SendConfirm} exact />
-            )}
-            {confirmingTransaction && !canConnect && isUnlocked && (
-              <Route path="/send/confirmSite" component={SendConfirmTransactionOnSite} exact />
             )}
             {isUnlocked && <Route path="/send" component={Send} exact />}
             {isUnlocked && (

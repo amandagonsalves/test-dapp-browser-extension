@@ -118,7 +118,7 @@ window.addEventListener("message", (event) => {
     return;
   }
 
-  if (event.data.type == "FROM_PAGE") {
+  if (event.data.type == "FROM_PAGE" && event.data.target == 'contentScript') {
     browser.runtime.sendMessage({
       type: 'OPEN_WALLET_POPUP',
       target: 'background'
@@ -157,10 +157,28 @@ window.addEventListener("message", (event) => {
 
     return;
   }
+
+  if (event.data.type == 'SEND_NFT' && event.data.target == 'contentScript') {
+    browser.runtime.sendMessage({
+      type: 'SEND_NFT',
+      target: 'background',
+    });
+
+    return;
+  }
+
+  if (event.data.type == 'SEND_SPT' && event.data.target == 'contentScript') {
+    browser.runtime.sendMessage({
+      type: 'SEND_SPT',
+      target: 'background',
+    });
+
+    return;
+  }
 }, false);
 
 browser.runtime.onMessage.addListener(request => {
-  if (typeof request == 'object' && request.type == 'DISCONNECT') {
+  if (request.type == 'DISCONNECT' && request.target == 'contentScript') {
     const id = browser.runtime.id;
     const port = browser.runtime.connect(id, { name: 'SYSCOIN' });
 
@@ -194,6 +212,36 @@ browser.runtime.onMessage.addListener(request => {
       type: 'TRANSFER_SYS',
       target: 'connectionsController',
       complete: request.complete
+    }, '*');
+
+    return;
+  }
+
+  if (request.type == 'SEND_NFT' && request.target == 'contentScript') {
+    window.postMessage({
+      type: 'SEND_NFT',
+      target: 'connectionsController',
+      responseSendNFT: request.responseSendNFT
+    }, '*');
+
+    return;
+  }
+
+  if (request.type == 'SEND_SPT' && request.target == 'contentScript') {
+    window.postMessage({
+      type: 'SEND_SPT',
+      target: 'connectionsController',
+      responseSendSPT: request.responseSendSPT
+    }, '*');
+
+    return;
+  }
+
+  if (request.type == 'FROM_PAGE' && request.target == 'contentScript') {
+    window.postMessage({
+      type: 'CONNECT_WALLET',
+      target: 'connectionsController',
+      connected: request.connected
     }, '*');
 
     return;

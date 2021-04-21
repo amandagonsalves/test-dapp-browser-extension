@@ -12,3 +12,5 @@ if (!window.ConnectionsController) {
 }
 
 window.dispatchEvent(new CustomEvent('SyscoinStatus', { detail: { SyscoinInstalled: true, ConnectionsController: true } }));
+
+// window.dispatchEvent(new CustomEvent('SyscoinNewConnectedAccount', { detail: { newAccount: true } }));

@@ -1,12 +1,27 @@
 import { sendMessage } from 'containers/auth/helpers';
 
 export interface IConnectionsController {
+  connectWallet: () => any;
   getWalletState: () => any;
   getConnectedAccount: () => any;
   transferSYS: (sender: string, receiver: string, amount: number, fee: number) => any;
+  handleSendNFT: () => any;
+  handleSendSPT: () => any;
 }
 
 const ConnectionsController = (): IConnectionsController => {
+  const connectWallet = async () => {
+    return await sendMessage({
+      type: 'CONNECT_WALLET', 
+      target: 'connectionsController',
+      freeze: true,
+      eventResult: 'connected'
+    }, {
+      type: 'FROM_PAGE',
+      target: 'contentScript'
+    });
+  }
+
   const getWalletState = async () => {
     return await sendMessage({
       type: 'SEND_STATE_TO_PAGE', 
@@ -47,10 +62,37 @@ const ConnectionsController = (): IConnectionsController => {
     });
   }
 
+  const handleSendNFT = async () => {
+    return await sendMessage({
+      type: 'SEND_NFT',
+      target: 'connectionsController',
+      freeze: true,
+      eventResult: 'responseSendNFT'
+    }, {
+      type: 'SEND_NFT',
+      target: 'contentScript',
+    });
+  }
+
+  const handleSendSPT = async () => {
+    return await sendMessage({
+      type: 'SEND_SPT',
+      target: 'connectionsController',
+      freeze: true,
+      eventResult: 'responseSendSPT'
+    }, {
+      type: 'SEND_SPT',
+      target: 'contentScript',
+    });
+  }
+
   return {
+    connectWallet,
     getWalletState,
     getConnectedAccount,
-    transferSYS
+    transferSYS,
+    handleSendNFT,
+    handleSendSPT
   }
 };
 

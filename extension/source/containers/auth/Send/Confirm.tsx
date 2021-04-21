@@ -15,6 +15,7 @@ import IWalletState from 'state/wallet/types';
 import { useAlert } from 'react-alert';
 
 import styles from './Confirm.scss';
+import { browser } from 'webextension-polyfill-ts';
 
 const SendConfirm = () => {
   const controller = useController();
@@ -28,16 +29,42 @@ const SendConfirm = () => {
   const alert = useAlert();
 
   const handleConfirm = () => {
-    controller.wallet.account.confirmTempTx().then(result => {
-      if (result) {
-        alert.removeAll();
-        alert.error(result.message);
-      }
-      else {
+    if (accounts[activeAccountId].balance > 0) {
+      controller.wallet.account.confirmTempTx().then(result => {
+        if (result) {
+          alert.removeAll();
+          alert.error(result.message);
+  
+          return;
+        }
+        
         setConfirmed(true);
-      }
-    })
+      });
+
+      return;
+    }
+
+    return;
   };
+
+  const handleClosePopup = () => {
+    browser.runtime.sendMessage({
+      type: "CLOSE_POPUP",
+      target: "background"
+    });
+  }
+
+  const handleCancelConfirmOnSite = () => {
+    browser.runtime.sendMessage({
+      type: "CANCEL_TRANSACTION",
+      target: "background"
+    });
+
+    browser.runtime.sendMessage({
+      type: "CLOSE_POPUP",
+      target: "background"
+    });
+  }
 
   return confirmed ? (
     <Layout title="Your transaction is underway" linkTo="/remind" showLogo>
@@ -49,7 +76,9 @@ const SendConfirm = () => {
         type="button" 
         theme="btn-gradient-primary"
         variant={styles.next} 
-        linkTo="/home">
+        linkTo="/home"
+        onClick={confirmingTransaction ? handleClosePopup : undefined}
+      >
         Next
       </Button>
     </Layout>
@@ -112,10 +141,11 @@ const SendConfirm = () => {
             type="button"
             theme="secondary"
             variant={clsx(styles.button, styles.close)}
-            linkTo="/send"
+            onClick={confirmingTransaction ? handleCancelConfirmOnSite : undefined}
           >
             Cancel
           </Button>
+
           <Button type="submit" variant={styles.button} onClick={handleConfirm}>
             Confirm
           </Button>

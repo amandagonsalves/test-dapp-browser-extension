@@ -11,10 +11,10 @@ const App = () => {
   const [amount, setAmount] = useState(0);
   const [fee, setFee] = useState(0.0000001);
   const [toAddress, setToAddress] = useState('');
-  let componentMounted = true;
+  const [confirmedTransaction, setConfirmedTransaction] = useState(false);
 
   useEffect(() => {
-    const callback = (event) => {
+    const callback = async (event) => {
       if (event.detail.SyscoinInstalled) {
         setIsInstalled(true);
 
@@ -35,36 +35,39 @@ const App = () => {
     window.addEventListener('SyscoinStatus', callback);
   }, []);
 
-  useEffect(() => {
-    if (controller) {
+  const setup = async () => {
+    const state = await controller.getWalletState();
+
+    console.log('state', state)
+    if (state.accounts.length > 0) {
       controller.getConnectedAccount()
         .then((data) => {
-          if (!data) {
-            return;
-          }
-      
-          if (componentMounted && data) {
+          console.log('data 1', data)
+          if (data) {
             setConnectedAccount(data);
             setConnectedAccountAddress(data.address.main);
             setBalance(data.balance);
-      
-            return;
           }
       
           return;
-        })
+        });
     }
+};
 
-    return () => {
-      componentMounted = false;
+  useEffect( () => {
+    console.log('controller', controller)
+
+    if (controller) {
+      setup();
     }
   }, [
     controller,
-    componentMounted
   ]);
 
   const handleMessageExtension = () => {
-    window.postMessage({ type: "FROM_PAGE" }, "*");
+    // await controller.connectAccount();
+    // await setup();
+    window.postMessage({ type: "FROM_PAGE", target: 'contentScript' }, "*");
   }
 
   const handleGetWalletState = async () => {
@@ -77,11 +80,17 @@ const App = () => {
     })
   }
 
+  const handleSendNFT= async () => {
+    return await controller.handleSendNFT();
+  }
+
+  const handleSendSPT= async () => {
+    return await controller.handleSendSPT();
+  }
+
   return (
     <div className="app">
-      {!controller && (<p>...</p>)}
-
-      {controller && (
+      {controller ? (
         <div>
           <header className="header">
             <img src={logo} alt="logo" className="header__logo" />
@@ -111,7 +120,7 @@ const App = () => {
             </thead>
 
             <tbody id="tbody">
-              {connectedAccount && (
+              {connectedAccount.label && (
                 <tr>
                   <td>{connectedAccount.label}</td>
                   <td>{connectedAccount.balance}</td>
@@ -140,18 +149,47 @@ const App = () => {
           />
 
           <button
+            disabled={
+              connectedAccount.balance === 0 ||
+              !amount ||
+              !fee ||
+              !toAddress
+            }
             onClick={() => transferSYS(connectedAccountAddress, toAddress, amount, fee)}
           >
             send sys
           </button>
+
+          {connectedAccount.balance === 0 && (
+            <p>You don't have SYS available.</p>
+          )}
 
           <button
             onClick={handleGetWalletState}
           >
             console wallet state
           </button>
+
+
+          <button
+            onClick={handleSendNFT}
+          >
+            send NFT
+          </button>
+
+
+          <button
+            onClick={handleSendSPT}
+          >
+            send SPT
+          </button>
         </div>
-      ) }
+      ) : (
+        <div>
+          <p>...</p>
+          <h1>You need to install Syscoin Wallet.</h1>
+        </div>
+      )}
     </div>
   );
 }
